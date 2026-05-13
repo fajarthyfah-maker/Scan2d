@@ -1,11 +1,12 @@
 import streamlit as st
 import re
+import random
 from collections import Counter
 
 # Konfigurasi halaman
 st.set_page_config(page_title="Penganalisa 4D Multi-Grup", layout="wide")
 
-st.title("📊 Penganalisa Angka 4D (Sistem Grup per 100 Baris)")
+st.title("📊 Penganalisa & Prediksi Angka 4D")
 st.markdown("---")
 
 # Input Area
@@ -30,7 +31,7 @@ if input_data:
         opsi_grup = [f"Grup {i+1} (Angka ke-{i*ukuran_grup+1} sampai {min((i+1)*ukuran_grup, total_angka)})" for i in range(len(daftar_grup))]
         opsi_grup.insert(0, "✨ Tampilkan Semua Grup (Gabungan Keseluruhan)")
         
-        pilihan = st.selectbox("🎯 Pilih Grup Data yang Ingin Dianalisa:", opsi_grup)
+        pilihan = st.selectbox("🎯 Pilih Grup Data yang Ingin Dianalisa & Diprediksi:", opsi_grup)
         
         if pilihan == "✨ Tampilkan Semua Grup (Gabungan Keseluruhan)":
             data_aktif = data_4d
@@ -42,7 +43,8 @@ if input_data:
             
         st.markdown("---")
         
-        tab1, tab2, tab3 = st.tabs(["📋 Rangkum Terbanyak", "🔢 Analisa 2D Depan", "🎯 Analisa 2D Tengah"])
+        # MENAMPILKAN 4 TAB KEMBALI secar utuh
+        tab1, tab2, tab3, tab4 = st.tabs(["📋 Rangkum Terbanyak", "🔢 Analisa 2D Depan", "🎯 Analisa 2D Tengah", "🔮 Prediksi Angka"])
         
         # --- TAB 1: RANGKUM TERBANYAK ---
         with tab1:
@@ -65,7 +67,7 @@ if input_data:
             st.subheader("Analisa Pasangan 2D Belakang yang Belum Muncul")
             
             groups_depan = {}
-            contoh_4d_depan = {} # Menyimpan contoh angka 4D utuh untuk display
+            contoh_4d_depan = {}
             
             for num in data_aktif:
                 depan = num[:2]
@@ -75,14 +77,15 @@ if input_data:
                     contoh_4d_depan[depan] = num
                 groups_depan[depan].add(belakang)
             
+            semua_belum_muncul_2d_depan = []
             for depan in sorted(groups_depan.keys()):
                 muncul_belakang = groups_depan[depan]
                 count_depan = len(muncul_belakang)
                 
                 semua_2d = [f"{i:02d}" for i in range(100)]
                 belum_muncul = [depan + b for b in semua_2d if b not in muncul_belakang]
+                semua_belum_muncul_2d_depan.extend(belum_muncul)
                 
-                # Menggunakan contoh angka asli utuh yang terdeteksi
                 contoh_full = contoh_4d_depan[depan]
                 
                 with st.expander(f"Prefix 2D Depan: {depan} ({count_depan} variasi ditemukan)"):
@@ -97,11 +100,11 @@ if input_data:
             st.caption("Mencari angka belakang (digit ke-4) dari 0-9 yang belum pernah berpasangan dengan 2D Tengah (digit ke-2 & ke-3).")
             
             groups_tengah = {}
-            contoh_4d_tengah = {} # Menyimpan contoh angka 4D utuh untuk display
+            contoh_4d_tengah = {}
             
             for num in data_aktif:
-                tengah = num[1:3]     # Digit ke-2 dan ke-3
-                ekor = num[3]         # Digit ke-4 (Ekor)
+                tengah = num[1:3]
+                ekor = num[3]
                 
                 if tengah not in groups_tengah:
                     groups_tengah[tengah] = set()
@@ -123,7 +126,30 @@ if input_data:
                     if belum_muncul_3d:
                         st.markdown(f"**Belum muncul dengan tengah {tengah}:**")
                         st.write(" * ".join(belum_muncul_3d) + " *")
-                    else:
-                        st.info(f"Semua ekor (0-9) sudah berpasangan dengan angka tengah {tengah}.")
+
+        # --- TAB 4: PREDIKSI ANGKA ---
+        with tab4:
+            st.subheader("🔮 Prediksi Kombinasi Angka Berdasarkan Data")
+            st.caption("Prediksi ini menyusun angka 4D baru dengan memanfaatkan kombinasi pasangan 2D depan yang tercatat belum pernah muncul pada grup ini.")
+            
+            # Membuat rekomendasi acak cerdas dari daftar kombinasi 4D yang belum pernah pecah/muncul
+            if 'semua_belum_muncul_2d_depan' in locals() and semua_belum_muncul_2d_depan:
+                st.markdown("### 🏆 5 Rekomendasi Angka 4D Terkuat:")
+                
+                # Mengambil maksimal 5 sampel acak dari daftar angka yang belum pernah muncul
+                jumlah_sampel = min(5, len(semua_belum_muncul_2d_depan))
+                rekomendasi = random.sample(semua_belum_muncul_2d_depan, jumlah_sampel)
+                
+                col_p1, col_p2, col_p3, col_p4, col_p5 = st.columns(5)
+                koloms = [col_p1, col_p2, col_p3, col_p4, col_p5]
+                
+                for idx, angka_prediksi in enumerate(rekomendasi):
+                    with koloms[idx]:
+                        st.metric(label=f"Prediksi #{idx+1}", value=angka_prediksi)
+                
+                if st.button("🔄 Generate Ulang Prediksi"):
+                    st.rerun()
+            else:
+                st.info("Kombinasi data terlalu penuh atau basis data belum dieksekusi dengan sempurna untuk memunculkan prediksi.")
 else:
     st.warning("Silakan masukkan data angka terlebih dahulu pada kolom di atas.")
